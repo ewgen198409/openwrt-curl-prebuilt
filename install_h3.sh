@@ -89,22 +89,18 @@ echo -e "${BOLD}Проверка работоспособности...${NC}"
 sleep 1
 
 # Проверяем наличие поддержки h3 в curl
-if command -v curl > /dev/null 2>&1; then
-    H3_SUPPORT=$(curl --version 2>/dev/null | grep -i "http/3\|h3")
-    
-    if [ -n "$H3_SUPPORT" ]; then
-        echo -e "------------------------------------------"
-        echo -e "${CHECK_MARK} ${GREEN}${BOLD}УСТАНОВКА ЗАВЕРШЕНА УСПЕШНО!${NC}"
-        echo -e "${INFO_ICON} Версия curl:"
-        curl --version | head -1
-        echo -e "${INFO_ICON} Поддержка: ${CYAN}HTTP/3 (QUIC)${NC}"
-        echo -e "------------------------------------------"
-        echo -e "${MAGENTA}${BOLD}Приятного использования нового стека!${NC}\n"
-        exit 0
-    fi
-fi
+H3_SUPPORT=$(curl -V 2>/dev/null | grep -Ei "HTTP3|h3")
 
-echo -e "------------------------------------------"
-echo -e "${CHECK_MARK} Пакеты установлены ($SUCCESS_COUNT/$TOTAL)"
-echo -e "${INFO_ICON} Выполните ${BOLD}curl --version${NC} для проверки HTTP/3"
-echo -e "------------------------------------------\n"
+if [ -n "$H3_SUPPORT" ]; then
+    echo -e "------------------------------------------"
+    echo -e "${CHECK_MARK} ${GREEN}${BOLD}УСТАНОВКА ЗАВЕРШЕНА УСПЕШНО!${NC}"
+    echo -e "${INFO_ICON} Поддержка протоколов: ${CYAN}$H3_SUPPORT${NC}"
+    echo -e "${INFO_ICON} Теперь curl может работать через QUIC / HTTP3."
+    echo -e "------------------------------------------"
+    echo -e "${MAGENTA}${BOLD}Приятного использования нового стека!${NC}\n"
+else
+    echo -e "------------------------------------------"
+    echo -e "${CROSS_MARK} ${RED}ВНИМАНИЕ: Пакеты установлены ($SUCCESS_COUNT/$TOTAL),${NC}"
+    echo -e "${RED}но тест HTTP3 не пройден. Проверьте логи opkg.${NC}"
+    echo -e "------------------------------------------\n"
+fi
