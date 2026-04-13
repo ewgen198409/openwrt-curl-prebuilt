@@ -3,6 +3,9 @@
   <img width="200" src="https://curl.se/logo/curl-logo.svg" />
 </p>
 <p align="center">
+  <img src="https://img.shields.io/github/downloads/ewgen198409/openwrt-curl-prebuilt/total?label=Total%20Downloads&color=blue&style=flat" alt="Total Downloads" />
+</p>
+<p align="center">
   <b>build curl library with quictls + libngtcp2 + libnghttp3</b>
 </p>
 
