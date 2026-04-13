@@ -51,6 +51,8 @@ jobs:
           
       - name: Create compress files
         run: |
+          mkdir -p bin/packages/${{ matrix.arch }}/packages_ci
+          cp install_h3.sh bin/packages/${{ matrix.arch }}/packages_ci/
           tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
 
       - name: Release packages
