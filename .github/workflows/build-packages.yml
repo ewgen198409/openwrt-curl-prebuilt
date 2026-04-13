@@ -33,6 +33,11 @@ jobs:
           curl_version=$(grep -Po '(?<=PKG_VERSION:=).*' curl_source/Makefile)
           echo "curl_version=$curl_version" >> "$GITHUB_ENV"
           mv curl_source curl
+          
+          # Configure curl for OpenSSL + QUIC support
+          sed -i 's/default LIBCURL_MBEDTLS/default LIBCURL_OPENSSL/g' curl/Config.in
+          sed -i -E '/LIBCURL_NG(HTTP3|TCP2)/,/default n/s/default n/default y/' curl/Config.in
+          sed -i '/config LIBCURL_OPENSSL_QUIC/,+3 s/default n/default y/' curl/Config.in
 
       - name: Prepare build environment
         run: |
@@ -40,15 +45,16 @@ jobs:
           [ -d curl ] || exit 1
           grep "PKG_VERSION" curl/Makefile | head -1
 
-      - name: Build curl with QUIC support (curl depends on nghttp3, ngtcp2, OpenSSL)
+      - name: Build curl with QUIC support (curl depends on libnghttp3, libngtcp2, libopenssl)
         uses: sbwml/openwrt-gh-action-sdk@curl
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
           FEEDNAME: packages_ci
-          PACKAGES: curl
+          PACKAGES: curl libnghttp3 libngtcp2 libopenssl openssl-util
           NO_REFRESH_CHECK: true
           IGNORE_ERRORS: false
-          
+          V: s
+
       - name: Create compress files
         run: |
           mkdir -p bin/packages/${{ matrix.arch }}/packages_ci
