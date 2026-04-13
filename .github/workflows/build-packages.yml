@@ -55,6 +55,22 @@ jobs:
           IGNORE_ERRORS: false
           V: s
 
+      - name: Show build error logs on failure
+        if: failure()
+        run: |
+          echo "=== Build Failed - Showing error details ==="
+          echo ""
+          echo "=== Looking for build errors in logs ==="
+          if [ -d /builder ]; then
+            # Show config errors
+            find /builder/build_dir -name "config.log" -exec echo "\n--- {} ---" \; -exec tail -100 {} \; 2>/dev/null || true
+            # Show make errors from build directories
+            find /builder/build_dir -type f -name ".log" -exec echo "\n--- {} ---" \; -exec tail -100 {} \; 2>/dev/null || true
+          fi
+          echo ""
+          echo "=== Failed packages directories ==="
+          ls -la /builder/build_dir/target-* 2>/dev/null | grep -E "curl|openssl|ngtcp2|nghttp3|boringssl" || echo "No matching directories found"
+
       - name: Create compress files
         run: |
           tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
