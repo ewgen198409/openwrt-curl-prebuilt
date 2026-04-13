@@ -17,7 +17,6 @@ jobs:
       matrix:
         arch:
           - aarch64_cortex-a53
-          - mipsel_24kc
           - x86_64
         openwrt:
           - '24.10'
@@ -58,7 +57,7 @@ jobs:
 
       - name: Create compress files
         run: |
-          tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}.tar.gz -C bin/packages/${{ matrix.arch }}-${{ matrix.openwrt }}/ packages_ci
+          tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
 
       - name: Release packages
         uses: ncipollo/release-action@v1
