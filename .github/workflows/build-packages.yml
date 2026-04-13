@@ -21,7 +21,7 @@ jobs:
           - x86_64
         tag:
           - openwrt-24.10
-          
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,15 +48,7 @@ jobs:
           PACKAGES: curl
           NO_REFRESH_CHECK: true
           IGNORE_ERRORS: false
-          V: s
-
-      - name: Show build error logs on failure
-        if: failure()
-        run: |
-          echo "=== Build Failed ==="
-          find /builder/build_dir -name "config.log" -exec echo "--- {} ---" \; -exec tail -20 {} \; 2>/dev/null || true
-          find /builder/build_dir -type f -name ".log" -exec echo "--- {} ---" \; -exec tail -20 {} \; 2>/dev/null || true
-
+          
       - name: Create compress files
         run: |
           tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
