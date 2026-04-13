@@ -41,7 +41,7 @@ jobs:
           # Add required custom package definitions
           git clone https://github.com/sbwml/package_libs_nghttp3 --depth=1 nghttp3
           git clone https://github.com/sbwml/package_libs_ngtcp2 --depth=1 ngtcp2
-          git clone https://github.com/sbwml/package_libs_openssl -b openssl-3.2 --depth=1 openssl
+          git clone https://github.com/sbwml/package_libs_openssl --depth=1 openssl
 
       - name: Prepare build environment
         run: |
