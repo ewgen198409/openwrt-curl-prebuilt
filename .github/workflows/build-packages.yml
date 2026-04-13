@@ -10,16 +10,15 @@ on:
 jobs:
   build:
     if: github.event.repository.owner.id == github.event.sender.id
-    name: Build ${{ matrix.arch }}-${{ matrix.openwrt }}
+    name: Build ${{ matrix.arch }}-${{ matrix.tag }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         arch:
           - aarch64_cortex-a53
+          - mipsel_24kc
           - x86_64
-        openwrt:
-          - '24.10'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,14 +33,14 @@ jobs:
 
       - name: Prepare build environment
         run: |
-          echo "ARCH=${{ matrix.arch }} OPENWRT=${{ matrix.openwrt }}"
+          echo "ARCH=${{ matrix.arch }} TAG=${{ matrix.tag }}"
           [ -d curl ] || exit 1
           grep "PKG_VERSION" curl/Makefile | head -1
 
       - name: Build curl with QUIC support (curl depends on nghttp3, ngtcp2, OpenSSL)
         uses: sbwml/openwrt-gh-action-sdk@curl
         env:
-          ARCH: ${{ matrix.arch }}-${{ matrix.openwrt }}
+          ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
           FEEDNAME: packages_ci
           PACKAGES: curl
           NO_REFRESH_CHECK: true
@@ -57,15 +56,15 @@ jobs:
 
       - name: Create compress files
         run: |
-          tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+          tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
 
       - name: Release packages
         uses: ncipollo/release-action@v1
         with:
-          name: curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}
+          name: curl-${{ env.curl_version }}
           commit: main
           tag: ${{ env.curl_version }}
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           replacesArtifacts: true
-          artifacts: "curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}.tar.gz"
+          artifacts: "curl-${{ env.curl_version }}-${{ matrix.arch }}.tar.gz"
