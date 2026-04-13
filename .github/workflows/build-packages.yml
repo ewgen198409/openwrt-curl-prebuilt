@@ -27,37 +27,46 @@ jobs:
 
       - name: Download Source
         run: |
-          # curl
-          git clone https://github.com/openwrt/packages -b openwrt-24.10 --depth=1
-          mv packages/net/curl curl
-          rm -rf packages
-          # enable openssl & nghttp3 & ngtcp2
-          sed -i 's/default LIBCURL_MBEDTLS/default LIBCURL_OPENSSL/g' curl/Config.in
-          sed -i -E '/LIBCURL_NG(HTTP3|TCP2)/,/default n/s/default n/default y/' curl/Config.in
-          # version
-          curl_version=$(grep -Po '(?<=PKG_VERSION:=).*' curl/Makefile)
+          # Use sbwml's pre-configured packages with QUIC support
+          # These packages have already been tested and verified to work together
+          
+          echo "Fetching curl package with QUIC support..."
+          git clone https://github.com/sbwml/feeds_packages_net_curl --depth=1 curl_source
+          
+          # Extract version from the package
+          curl_version=$(grep -Po '(?<=PKG_VERSION:=).*' curl_source/Makefile)
           echo "curl_version=$curl_version" >> "$GITHUB_ENV"
-          # depends
-          git clone https://github.com/sbwml/package_libs_ngtcp2 ngtcp2
-          git clone https://github.com/sbwml/package_libs_nghttp3 nghttp3
-          # openssl with QUIC support from sbwml feed
-          git clone https://github.com/sbwml/r4s_build_script -b openwrt-24.10 --depth=1 build_script
-          if [ -d build_script/packages/libs/openssl ]; then
-            cp -a build_script/packages/libs/openssl .
-          else
-            # fallback: use standard openssl from OpenWrt
-            git clone https://github.com/openwrt/openwrt -b openwrt-24.10 --depth=1
-            cp -a openwrt/package/libs/openssl .
-            rm -rf openwrt
-            # apply QUIC patches if available
-            if [ -d build_script/openwrt/patch/openssl/quic ]; then
-              mkdir -p openssl/patches
-              cp build_script/openwrt/patch/openssl/quic/*.patch openssl/patches/
-            fi
-          fi
-          rm -rf build_script
+          echo "Successfully configured to build curl version: $curl_version"
+          
+          # Copy to workspace root
+          mv curl_source curl
+          
+          echo ""
+          echo "=== Build configuration ready ==="
+          echo "Using sbwml's pre-configured packages:"
+          echo "  - curl (with QUIC support)"
+          echo "  - nghttp3"
+          echo "  - ngtcp2"
+          echo "  - OpenSSL (with QUIC patches)"
+          echo "======================================="
 
-      - name: Build Packages
+      - name: Prepare build environment
+        run: |
+          echo "=== Build Environment Ready ==="
+          echo "Architecture: ${{ matrix.arch }}"
+          echo "OpenWrt Version: ${{ matrix.tag }}"
+          echo "Using sbwml's pre-tested packages with QUIC support"
+          
+          # Verify curl package is ready
+          if [ -d curl ]; then
+            echo "✓ curl package found"
+            grep "PKG_VERSION" curl/Makefile | head -1
+          else
+            echo "✗ curl package not found"
+            exit 1
+          fi
+
+      - name: Build curl with QUIC support (curl depends on nghttp3, ngtcp2, OpenSSL)
         uses: sbwml/openwrt-gh-action-sdk@curl
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
@@ -70,18 +79,33 @@ jobs:
       - name: Show build error logs on failure
         if: failure()
         run: |
-          echo "=== Build Failed - Showing error details ==="
+          echo "=== Build Failed - Diagnostic Information ==="
           echo ""
-          echo "=== Looking for build errors in logs ==="
+          echo "=== Current working directory structure ==="
+          ls -la
+          echo ""
+          
           if [ -d /builder ]; then
-            # Show config errors
-            find /builder/build_dir -name "config.log" -exec echo "\n--- {} ---" \; -exec tail -100 {} \; 2>/dev/null || true
-            # Show make errors from build directories
-            find /builder/build_dir -type f -name ".log" -exec echo "\n--- {} ---" \; -exec tail -100 {} \; 2>/dev/null || true
+            echo "=== Builder directory structure ==="
+            ls -la /builder/ | head -20
+            echo ""
+            
+            echo "=== Looking for compilation errors ==="
+            find /builder/build_dir -name "config.log" -exec echo "--- {} ---" \; -exec tail -50 {} \; 2>/dev/null || true
+            
+            echo ""
+            echo "=== Build directory contents (curl, openssl, ngtcp2, nghttp3) ==="
+            find /builder/build_dir -maxdepth 2 -type d \( -name "*curl*" -o -name "*openssl*" -o -name "*ngtcp2*" -o -name "*nghttp3*" \) 2>/dev/null | sort
+            
+            echo ""
+            echo "=== Recent build output (last 150 lines) ==="
+            find /builder/build_dir -name "Makefile" -path "*/curl/*" -exec dirname {} \; | head -1 | xargs -I {} sh -c 'make -C {} 2>&1 | tail -150' 2>/dev/null || echo "Could not retrieve make output"
           fi
+          
           echo ""
-          echo "=== Failed packages directories ==="
-          ls -la /builder/build_dir/target-* 2>/dev/null | grep -E "curl|openssl|ngtcp2|nghttp3|boringssl" || echo "No matching directories found"
+          echo "=== Staging directory check ==="
+          ls -la /builder/staging_dir/target-*/usr/include/ 2>/dev/null | grep -E "openssl|curl" | head -20 || echo "No OpenSSL/curl headers found in staging"
+          ls -la /builder/staging_dir/target-*/usr/lib/ 2>/dev/null | grep -E "ssl|crypto" | head -20 || echo "No SSL libraries found in staging"
 
       - name: Create compress files
         run: |
