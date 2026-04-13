@@ -40,10 +40,22 @@ jobs:
           # depends
           git clone https://github.com/sbwml/package_libs_ngtcp2 ngtcp2
           git clone https://github.com/sbwml/package_libs_nghttp3 nghttp3
-          # boringssl for QUIC
-          git clone https://github.com/openwrt/openwrt -b openwrt-24.10 --depth=1
-          cp -a openwrt/package/libs/boringssl boringssl
-          rm -rf openwrt
+          # openssl with QUIC support from sbwml feed
+          git clone https://github.com/sbwml/r4s_build_script -b openwrt-24.10 --depth=1 build_script
+          if [ -d build_script/packages/libs/openssl ]; then
+            cp -a build_script/packages/libs/openssl .
+          else
+            # fallback: use standard openssl from OpenWrt
+            git clone https://github.com/openwrt/openwrt -b openwrt-24.10 --depth=1
+            cp -a openwrt/package/libs/openssl .
+            rm -rf openwrt
+            # apply QUIC patches if available
+            if [ -d build_script/openwrt/patch/openssl/quic ]; then
+              mkdir -p openssl/patches
+              cp build_script/openwrt/patch/openssl/quic/*.patch openssl/patches/
+            fi
+          fi
+          rm -rf build_script
 
       - name: Build Packages
         uses: sbwml/openwrt-gh-action-sdk@curl
