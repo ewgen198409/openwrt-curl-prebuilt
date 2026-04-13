@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     if: github.event.repository.owner.id == github.event.sender.id
-    name: Build ${{ matrix.arch }}-${{ matrix.tag }}
+    name: Build ${{ matrix.arch }}-${{ matrix.openwrt }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -19,6 +19,8 @@ jobs:
           - aarch64_cortex-a53
           - mipsel_24kc
           - x86_64
+        openwrt:
+          - 24.10
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,14 +35,14 @@ jobs:
 
       - name: Prepare build environment
         run: |
-          echo "ARCH=${{ matrix.arch }} TAG=${{ matrix.tag }}"
+          echo "ARCH=${{ matrix.arch }} OPENWRT=${{ matrix.openwrt }}"
           [ -d curl ] || exit 1
           grep "PKG_VERSION" curl/Makefile | head -1
 
       - name: Build curl with QUIC support (curl depends on nghttp3, ngtcp2, OpenSSL)
         uses: sbwml/openwrt-gh-action-sdk@curl
         env:
-          ARCH: ${{ matrix.arch }}-${{ matrix.tag }}
+          ARCH: ${{ matrix.arch }}-${{ matrix.openwrt }}
           FEEDNAME: packages_ci
           PACKAGES: curl
           NO_REFRESH_CHECK: true
@@ -56,15 +58,15 @@ jobs:
 
       - name: Create compress files
         run: |
-          tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}.tar.gz -C bin/packages/${{ matrix.arch }}/ packages_ci
+          tar -zcvf curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}.tar.gz -C bin/packages/${{ matrix.arch }}-${{ matrix.openwrt }}/ packages_ci
 
       - name: Release packages
         uses: ncipollo/release-action@v1
         with:
-          name: curl-${{ env.curl_version }}
+          name: curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}
           commit: main
           tag: ${{ env.curl_version }}
           token: ${{ secrets.GITHUB_TOKEN }}
           allowUpdates: true
           replacesArtifacts: true
-          artifacts: "curl-${{ env.curl_version }}-${{ matrix.arch }}.tar.gz"
+          artifacts: "curl-${{ env.curl_version }}-${{ matrix.arch }}-${{ matrix.openwrt }}.tar.gz"
