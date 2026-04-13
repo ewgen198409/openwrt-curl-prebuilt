@@ -44,7 +44,7 @@ jobs:
           git clone https://github.com/openwrt/openwrt -b openwrt-24.10 --depth=1
           cp -a openwrt/package/libs/openssl openssl
           rm -rf openwrt
-          mirror="raw.githubusercontent.com/sbwml/r4s_build_script/master"
+          mirror="raw.githubusercontent.com/sbwml/r4s_build_script/openwrt-24.10"
           pushd openssl/patches
               curl -sO https://$mirror/openwrt/patch/openssl/quic/0001-QUIC-Add-support-for-BoringSSL-QUIC-APIs.patch
               curl -sO https://$mirror/openwrt/patch/openssl/quic/0002-QUIC-New-method-to-get-QUIC-secret-length.patch
