@@ -17,9 +17,8 @@ jobs:
       matrix:
         arch:
           - aarch64_cortex-a53
-        tag:
-          - openwrt-24.10
-
+          - mipsel_24kc
+          - x86_64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,44 +26,16 @@ jobs:
 
       - name: Download Source
         run: |
-          # Use sbwml's pre-configured packages with QUIC support
-          # These packages have already been tested and verified to work together
-          
-          echo "Fetching curl package with QUIC support..."
           git clone https://github.com/sbwml/feeds_packages_net_curl --depth=1 curl_source
-          
-          # Extract version from the package
           curl_version=$(grep -Po '(?<=PKG_VERSION:=).*' curl_source/Makefile)
           echo "curl_version=$curl_version" >> "$GITHUB_ENV"
-          echo "Successfully configured to build curl version: $curl_version"
-          
-          # Copy to workspace root
           mv curl_source curl
-          
-          echo ""
-          echo "=== Build configuration ready ==="
-          echo "Using sbwml's pre-configured packages:"
-          echo "  - curl (with QUIC support)"
-          echo "  - nghttp3"
-          echo "  - ngtcp2"
-          echo "  - OpenSSL (with QUIC patches)"
-          echo "======================================="
 
       - name: Prepare build environment
         run: |
-          echo "=== Build Environment Ready ==="
-          echo "Architecture: ${{ matrix.arch }}"
-          echo "OpenWrt Version: ${{ matrix.tag }}"
-          echo "Using sbwml's pre-tested packages with QUIC support"
-          
-          # Verify curl package is ready
-          if [ -d curl ]; then
-            echo "✓ curl package found"
-            grep "PKG_VERSION" curl/Makefile | head -1
-          else
-            echo "✗ curl package not found"
-            exit 1
-          fi
+          echo "ARCH=${{ matrix.arch }} TAG=${{ matrix.tag }}"
+          [ -d curl ] || exit 1
+          grep "PKG_VERSION" curl/Makefile | head -1
 
       - name: Build curl with QUIC support (curl depends on nghttp3, ngtcp2, OpenSSL)
         uses: sbwml/openwrt-gh-action-sdk@curl
@@ -79,33 +50,9 @@ jobs:
       - name: Show build error logs on failure
         if: failure()
         run: |
-          echo "=== Build Failed - Diagnostic Information ==="
-          echo ""
-          echo "=== Current working directory structure ==="
-          ls -la
-          echo ""
-          
-          if [ -d /builder ]; then
-            echo "=== Builder directory structure ==="
-            ls -la /builder/ | head -20
-            echo ""
-            
-            echo "=== Looking for compilation errors ==="
-            find /builder/build_dir -name "config.log" -exec echo "--- {} ---" \; -exec tail -50 {} \; 2>/dev/null || true
-            
-            echo ""
-            echo "=== Build directory contents (curl, openssl, ngtcp2, nghttp3) ==="
-            find /builder/build_dir -maxdepth 2 -type d \( -name "*curl*" -o -name "*openssl*" -o -name "*ngtcp2*" -o -name "*nghttp3*" \) 2>/dev/null | sort
-            
-            echo ""
-            echo "=== Recent build output (last 150 lines) ==="
-            find /builder/build_dir -name "Makefile" -path "*/curl/*" -exec dirname {} \; | head -1 | xargs -I {} sh -c 'make -C {} 2>&1 | tail -150' 2>/dev/null || echo "Could not retrieve make output"
-          fi
-          
-          echo ""
-          echo "=== Staging directory check ==="
-          ls -la /builder/staging_dir/target-*/usr/include/ 2>/dev/null | grep -E "openssl|curl" | head -20 || echo "No OpenSSL/curl headers found in staging"
-          ls -la /builder/staging_dir/target-*/usr/lib/ 2>/dev/null | grep -E "ssl|crypto" | head -20 || echo "No SSL libraries found in staging"
+          echo "=== Build Failed ==="
+          find /builder/build_dir -name "config.log" -exec echo "--- {} ---" \; -exec tail -20 {} \; 2>/dev/null || true
+          find /builder/build_dir -type f -name ".log" -exec echo "--- {} ---" \; -exec tail -20 {} \; 2>/dev/null || true
 
       - name: Create compress files
         run: |
