@@ -19,6 +19,9 @@ jobs:
           - aarch64_cortex-a53
           - mipsel_24kc
           - x86_64
+        tag:
+          - openwrt-24.10
+          
     steps:
       - uses: actions/checkout@v4
         with:
